@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuauObs — Luau Obfuscator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0a0f;
+    --surface: #10101a;
+    --panel:   #141420;
+    --border:  #1e1e32;
+    --accent:  #7c3aed;
+    --accent2: #a855f7;
+    --glow:    #7c3aed44;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #eab308;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --mono:    'JetBrains Mono', monospace;
+    --sans:    'Syne', sans-serif;
+  }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: var(–sans);
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* === BACKGROUND GRID === */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background-image:
+linear-gradient(rgba(124,58,237,.04) 1px, transparent 1px),
+linear-gradient(90deg, rgba(124,58,237,.04) 1px, transparent 1px);
+background-size: 40px 40px;
+pointer-events: none;
+z-index: 0;
+}
+
+body::after {
+content: ‘’;
+position: fixed;
+top: -20%;
+left: -10%;
+width: 60%;
+height: 60%;
+background: radial-gradient(ellipse, #7c3aed18 0%, transparent 70%);
+pointer-events: none;
+z-index: 0;
+}
+
+/* === HEADER === */
+header {
+position: relative;
+z-index: 10;
+padding: 24px 40px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+border-bottom: 1px solid var(–border);
+backdrop-filter: blur(12px);
+background: rgba(10,10,15,.7);
+}
+
+.logo {
+display: flex;
+align-items: center;
+gap: 12px;
+}
+
+.logo-icon {
+width: 36px; height: 36px;
+background: linear-gradient(135deg, var(–accent), var(–accent2));
+border-radius: 8px;
+display: flex; align-items: center; justify-content: center;
+font-size: 18px;
+box-shadow: 0 0 20px var(–glow);
+}
+
+.logo-text {
+font-size: 20px;
+font-weight: 800;
+letter-spacing: -0.5px;
+}
+.logo-text span { color: var(–accent2); }
+
+.header-badge {
+font-family: var(–mono);
+font-size: 11px;
+color: var(–muted);
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 4px 10px;
+border-radius: 20px;
+}
+
+/* === MAIN LAYOUT === */
+main {
+position: relative;
+z-index: 1;
+display: grid;
+grid-template-columns: 280px 1fr 1fr;
+grid-template-rows: 1fr;
+height: calc(100vh - 69px);
+}
+
+/* === SIDEBAR === */
+.sidebar {
+border-right: 1px solid var(–border);
+background: var(–surface);
+overflow-y: auto;
+padding: 20px;
+display: flex;
+flex-direction: column;
+gap: 24px;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(–border); border-radius: 2px; }
+
+.section-label {
+font-size: 10px;
+font-weight: 700;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 10px;
+}
+
+.toggle-group {
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+
+.toggle-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 8px 12px;
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 8px;
+cursor: pointer;
+transition: border-color .15s, background .15s;
+}
+.toggle-item:hover { border-color: var(–accent); background: #1a1a2a; }
+
+.toggle-label {
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 13px;
+font-weight: 600;
+}
+.toggle-label .icon { font-size: 14px; }
+
+.toggle-desc {
+font-size: 10px;
+color: var(–muted);
+font-family: var(–mono);
+margin-top: 2px;
+}
+
+/* Custom Toggle Switch */
+.switch {
+position: relative;
+width: 36px; height: 20px;
+flex-shrink: 0;
+}
+.switch input { display: none; }
+.switch-track {
+position: absolute;
+inset: 0;
+background: var(–border);
+border-radius: 10px;
+transition: background .2s;
+cursor: pointer;
+}
+.switch input:checked + .switch-track { background: var(–accent); box-shadow: 0 0 10px var(–glow); }
+.switch-thumb {
+position: absolute;
+top: 3px; left: 3px;
+width: 14px; height: 14px;
+background: white;
+border-radius: 50%;
+transition: transform .2s;
+pointer-events: none;
+}
+.switch input:checked ~ .switch-thumb { transform: translateX(16px); }
+
+.input-field {
+width: 100%;
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 8px 12px;
+color: var(–text);
+font-family: var(–mono);
+font-size: 12px;
+outline: none;
+transition: border-color .15s;
+}
+.input-field:focus { border-color: var(–accent); }
+.input-field::placeholder { color: var(–muted); }
+
+.obfuscate-btn {
+width: 100%;
+padding: 12px;
+background: linear-gradient(135deg, var(–accent), var(–accent2));
+border: none;
+border-radius: 10px;
+color: white;
+font-family: var(–sans);
+font-size: 14px;
+font-weight: 700;
+cursor: pointer;
+letter-spacing: 0.5px;
+transition: opacity .15s, transform .1s, box-shadow .15s;
+box-shadow: 0 4px 20px var(–glow);
+position: relative;
+overflow: hidden;
+}
+.obfuscate-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 28px var(–glow); }
+.obfuscate-btn:active { transform: translateY(0); }
+.obfuscate-btn.loading { pointer-events: none; opacity: .7; }
+.obfuscate-btn::before {
+content: ‘’;
+position: absolute;
+top: 0; left: -100%;
+width: 100%; height: 100%;
+background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+transition: left .4s;
+}
+.obfuscate-btn:hover::before { left: 100%; }
+
+/* === STATS === */
+.stats-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 6px;
+}
+.stat-card {
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 10px;
+text-align: center;
+}
+.stat-value {
+font-family: var(–mono);
+font-size: 16px;
+font-weight: 700;
+color: var(–accent2);
+}
+.stat-label {
+font-size: 9px;
+color: var(–muted);
+text-transform: uppercase;
+letter-spacing: 1px;
+margin-top: 2px;
+}
+
+/* === EDITOR PANES === */
+.editor-pane {
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+.pane-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 10px 16px;
+border-bottom: 1px solid var(–border);
+background: var(–surface);
+flex-shrink: 0;
+}
+
+.pane-title {
+font-size: 12px;
+font-weight: 700;
+letter-spacing: 1px;
+text-transform: uppercase;
+color: var(–muted);
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.pane-dot {
+width: 8px; height: 8px;
+border-radius: 50%;
+background: var(–muted);
+}
+.pane-dot.input  { background: var(–yellow); box-shadow: 0 0 8px var(–yellow); }
+.pane-dot.output { background: var(–green);  box-shadow: 0 0 8px var(–green); }
+
+.pane-actions {
+display: flex;
+gap: 6px;
+}
+
+.action-btn {
+padding: 4px 10px;
+background: var(–panel);
+border: 1px solid var(–border);
+border-radius: 6px;
+color: var(–muted);
+font-family: var(–mono);
+font-size: 11px;
+cursor: pointer;
+transition: color .15s, border-color .15s;
+}
+.action-btn:hover { color: var(–text); border-color: var(–accent); }
+
+textarea {
+flex: 1;
+background: var(–bg);
+border: none;
+resize: none;
+padding: 16px;
+color: var(–text);
+font-family: var(–mono);
+font-size: 12.5px;
+line-height: 1.7;
+outline: none;
+tab-size: 2;
+}
+textarea::placeholder { color: #2a2a3a; }
+textarea::-webkit-scrollbar { width: 6px; height: 6px; }
+textarea::-webkit-scrollbar-track { background: transparent; }
+textarea::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+
+/* Output syntax color tint */
+.output-area { color: #c4b5fd; }
+
+/* === STATUS BAR === */
+.status-bar {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 4px 12px;
+background: var(–surface);
+border-top: 1px solid var(–border);
+font-family: var(–mono);
+font-size: 10px;
+color: var(–muted);
+flex-shrink: 0;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(–muted); }
+.status-dot.ok  { background: var(–green); box-shadow: 0 0 6px var(–green); }
+.status-dot.err { background: var(–red); box-shadow: 0 0 6px var(–red); }
+.status-dot.busy { background: var(–yellow); animation: pulse 1s infinite; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* === DIVIDER === */
+.v-divider { border-left: 1px solid var(–border); }
+
+/* === TOAST === */
+.toast {
+position: fixed;
+bottom: 24px;
+right: 24px;
+background: var(–panel);
+border: 1px solid var(–accent);
+border-radius: 10px;
+padding: 12px 18px;
+font-size: 13px;
+font-weight: 600;
+box-shadow: 0 8px 32px rgba(0,0,0,.4);
+z-index: 100;
+transform: translateY(80px);
+opacity: 0;
+transition: transform .3s, opacity .3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* === FEATURE BADGES === */
+.feature-list {
+display: flex;
+flex-wrap: wrap;
+gap: 4px;
+}
+.badge {
+font-family: var(–mono);
+font-size: 9px;
+padding: 2px 7px;
+border-radius: 4px;
+border: 1px solid var(–border);
+color: var(–muted);
+}
+.badge.on  { border-color: var(–accent); color: var(–accent2); background: #7c3aed15; }
+
+/* === SCROLLBAR on output === */
+.output-wrap { flex: 1; overflow: auto; }
+.output-wrap::-webkit-scrollbar { width: 6px; }
+.output-wrap::-webkit-scrollbar-track { background: transparent; }
+.output-wrap::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+
+.char-count {
+font-family: var(–mono);
+font-size: 10px;
+color: var(–muted);
+padding: 2px 12px;
+text-align: right;
+background: var(–surface);
+border-top: 1px solid var(–border);
+flex-shrink: 0;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-text">Luau<span>Obs</span></div>
+    </div>
+  </div>
+  <div class="header-badge">v2.0.0 · Advanced Luau Obfuscator</div>
+</header>
+
+<main>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="section-label">Obfuscation Layers</div>
+      <div class="toggle-group" id="toggleGroup">
+
+```
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🔤</span> Variable Renaming</div>
+        <div class="toggle-desc">Renames locals to garbled IDs</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_renameVariables" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🔐</span> String Encryption</div>
+        <div class="toggle-desc">XOR-encrypts all string literals</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_encryptStrings" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🔢</span> Number Obfuscation</div>
+        <div class="toggle-desc">Replaces literals with expressions</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_obfuscateNumbers" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">💀</span> Dead Code Injection</div>
+        <div class="toggle-desc">Injects unreachable junk code</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_injectDeadCode" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🌀</span> Control Flow</div>
+        <div class="toggle-desc">State-machine + opaque predicates</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_controlFlow" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">⚙️</span> Custom VM</div>
+        <div class="toggle-desc">Embeds bytecode + VM interpreter</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_customVM" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🛡️</span> Anti-Tamper</div>
+        <div class="toggle-desc">Hook detection + integrity checks</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_antiTamper" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+
+    <label class="toggle-item">
+      <div>
+        <div class="toggle-label"><span class="icon">🔖</span> Watermark</div>
+        <div class="toggle-desc">Embeds author ID + checksum</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="opt_watermark" checked>
+        <div class="switch-track"></div>
+        <div class="switch-thumb"></div>
+      </label>
+    </label>
+  </div>
+</div>
+
+<div>
+  <div class="section-label">Watermark</div>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <input class="input-field" id="opt_author" placeholder="Author name" value="Anonymous">
+    <input class="input-field" id="opt_id" placeholder="Script ID (leave blank = random)">
+  </div>
+</div>
+
+<div>
+  <div class="section-label">Stats</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="stat_in">0</div>
+      <div class="stat-label">Input chars</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat_out">0</div>
+      <div class="stat-label">Output chars</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat_ratio">—</div>
+      <div class="stat-label">Size ratio</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat_layers">0</div>
+      <div class="stat-label">Layers on</div>
+    </div>
+  </div>
+</div>
+
+<div>
+  <button class="obfuscate-btn" id="obfBtn" onclick="runObfuscate()">
+    ⚡ Obfuscate
+  </button>
+</div>
+
+<div>
+  <div class="section-label">Active Layers</div>
+  <div class="feature-list" id="badgeRow"></div>
+</div>
+```
+
+  </aside>
+
+  <!-- INPUT PANE -->
+
+  <div class="editor-pane">
+    <div class="pane-header">
+      <div class="pane-title"><div class="pane-dot input"></div> Input · Luau Source</div>
+      <div class="pane-actions">
+        <button class="action-btn" onclick="loadDemo()">Demo</button>
+        <button class="action-btn" onclick="clearInput()">Clear</button>
+      </div>
+    </div>
+    <textarea id="inputCode" spellcheck="false" placeholder="-- Paste your Luau / Lua script here...
+-- Example:
+local player = game.Players.LocalPlayer
+local name = player.Name
+print('Hello, ' .. name)"></textarea>
+    <div class="char-count" id="inputCount">0 chars · 0 lines</div>
+    <div class="status-bar">
+      <div class="status-dot ok" id="inputStatus"></div>
+      <span id="inputStatusText">Ready</span>
+    </div>
+  </div>
+
+  <!-- OUTPUT PANE -->
+
+  <div class="editor-pane v-divider">
+    <div class="pane-header">
+      <div class="pane-title"><div class="pane-dot output"></div> Output · Obfuscated</div>
+      <div class="pane-actions">
+        <button class="action-btn" onclick="copyOutput()">Copy</button>
+        <button class="action-btn" onclick="downloadOutput()">Download</button>
+      </div>
+    </div>
+    <textarea id="outputCode" class="output-area" spellcheck="false" readonly placeholder="-- Obfuscated output will appear here..."></textarea>
+    <div class="char-count" id="outputCount">0 chars · 0 lines</div>
+    <div class="status-bar">
+      <div class="status-dot" id="outputStatus"></div>
+      <span id="outputStatusText">Awaiting input</span>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     INLINE OBFUSCATOR ENGINE
+     ============================================================ -->
+
+<script>
+'use strict';
+
+/* ── UTILITIES ─────────────────────────────────────────── */
+const Util = {
+  randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min},
+  pick(arr){return arr[this.randInt(0,arr.length-1)]},
+  confusingIdentifier(length=16){
+    let r='_';
+    for(let i=0;i<length;i++)r+=this.pick(['_','O','l','I']);
+    return r;
+  },
+  uniqueName(existing){
+    let n;
+    do{n=this.confusingIdentifier(this.randInt(10,20))}while(existing.has(n));
+    existing.add(n);return n;
+  },
+  xorString(str,key){return str.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^key[i%key.length])).join('')},
+  randomKey(len=8){return Array.from({length:len},()=>this.randInt(1,255))},
+  toHex(n){return'0x'+n.toString(16).toUpperCase()},
+};
+
+/* ── TOKEN TYPES ───────────────────────────────────────── */
+const TT={NUMBER:'NUMBER',STRING:'STRING',NAME:'NAME',KEYWORD:'KEYWORD',
+  PUNCT:'PUNCT',COMMENT:'COMMENT',WHITESPACE:'WHITESPACE',NEWLINE:'NEWLINE',
+  RAW:'RAW',EOF:'EOF'};
+
+const LUA_KEYWORDS=new Set(['and','break','do','else','elseif','end','false',
+  'for','function','if','in','local','nil','not','or','repeat','return',
+  'then','true','until','while','continue']);
+
+/* ── LEXER ──────────────────────────────────────────────── */
+class Lexer{
+  constructor(src){this.s=src;this.pos=0;this.tokens=[];}
+  peek(o=0){return this.s[this.pos+o]||''}
+  adv(){return this.s[this.pos++]||''}
+  isD(c){return c>='0'&&c<='9'}
+  isA(c){return(c>='a'&&c<='z')||(c>='A'&&c<='Z')||c==='_'}
+  isAN(c){return this.isA(c)||this.isD(c)}
+  readStr(q){
+    let s=q;this.adv();
+    while(this.pos<this.s.length){
+      const c=this.adv();s+=c;
+      if(c==='\\')s+=this.adv();
+      else if(c===q)break;
+    }
+    return s;
+  }
+  readLongStr(level){
+    let s='['+'='.repeat(level)+'[';
+    const cl=']'+'='.repeat(level)+']';
+    while(this.pos<this.s.length){const c=this.adv();s+=c;if(s.endsWith(cl))break;}
+    return s;
+  }
+  readLineComment(){
+    let s='--';
+    while(this.pos<this.s.length&&this.peek()!=='\n')s+=this.adv();
+    return s;
+  }
+  tokenize(){
+    while(this.pos<this.s.length){
+      const c=this.peek();
+      if(c===' '||c==='\t'||c==='\r'){
+        let ws='';
+        while(this.pos<this.s.length&&(this.peek()===' '||this.peek()==='\t'||this.peek()==='\r'))ws+=this.adv();
+        this.tokens.push({type:TT.WHITESPACE,value:ws});continue;
+      }
+      if(c==='\n'){this.tokens.push({type:TT.NEWLINE,value:this.adv()});continue;}
+      if(c==='-'&&this.peek(1)==='-'){
+        this.adv();this.adv();
+        if(this.peek()==='['){
+          let lv=0,p=this.pos;
+          if(this.s[p]==='['){p++;while(this.s[p]==='='){lv++;p++;}
+            if(this.s[p]==='['){this.pos=p+1;const t=this.readLongStr(lv);
+              this.tokens.push({type:TT.COMMENT,value:'--'+t});continue;}
+          }
+        }
+        this.tokens.push({type:TT.COMMENT,value:this.readLineComment()});continue;
+      }
+      if(c==='"'||c==="'"){this.tokens.push({type:TT.STRING,value:this.readStr(c)});continue;}
+      if(c==='['&&(this.peek(1)==='['||this.peek(1)==='=')){
+        let lv=0,p=this.pos+1;
+        while(this.s[p]==='='){lv++;p++;}
+        if(this.s[p]==='['){this.pos=p+1;this.tokens.push({type:TT.STRING,value:this.readLongStr(lv)});continue;}
+      }
+      if(this.isD(c)||(c==='.'&&this.isD(this.peek(1)))){
+        let n='';
+        if(c==='0'&&(this.peek(1)==='x'||this.peek(1)==='X')){
+          n+=this.adv()+this.adv();
+          while(/[0-9a-fA-F]/.test(this.peek()))n+=this.adv();
+        }else{
+          while(this.isD(this.peek()))n+=this.adv();
+          if(this.peek()==='.'){n+=this.adv();while(this.isD(this.peek()))n+=this.adv();}
+          if(this.peek()==='e'||this.peek()==='E'){n+=this.adv();
+            if(this.peek()==='+'||this.peek()==='-')n+=this.adv();
+            while(this.isD(this.peek()))n+=this.adv();}
+        }
+        this.tokens.push({type:TT.NUMBER,value:n});continue;
+      }
+      if(this.isA(c)){
+        let nm='';while(this.isAN(this.peek()))nm+=this.adv();
+        this.tokens.push({type:LUA_KEYWORDS.has(nm)?TT.KEYWORD:TT.NAME,value:nm});continue;
+      }
+      const two=c+this.peek(1);
+      const three=two+this.peek(2);
+      if(three==='...'){this.tokens.push({type:TT.PUNCT,value:'...'});this.adv();this.adv();this.adv();continue;}
+      let matched=false;
+      for(const p of['~=','<=','>=','==','..','//']){
+        if(two===p){this.tokens.push({type:TT.PUNCT,value:p});this.adv();this.adv();matched=true;break;}
+      }
+      if(!matched)this.tokens.push({type:TT.PUNCT,value:this.adv()});
+    }
+    this.tokens.push({type:TT.EOF,value:''});
+    return this.tokens;
+  }
+}
+
+/* ── VARIABLE RENAMER ───────────────────────────────────── */
+class VariableRenamer{
+  constructor(tokens){this.tokens=tokens;this.used=new Set();this.scopes=[new Map()];}
+  cur(){return this.scopes[this.scopes.length-1]}
+  push(){this.scopes.push(new Map())}
+  pop(){if(this.scopes.length>1)this.scopes.pop()}
+  resolve(n){for(let i=this.scopes.length-1;i>=0;i--){if(this.scopes[i].has(n))return this.scopes[i].get(n);}return null}
+  define(n){const r=Util.uniqueName(this.used);this.cur().set(n,r);return r}
+  rename(){
+    const tokens=this.tokens,result=[];let i=0;
+    while(i<tokens.length){
+      const tok=tokens[i];
+      if(tok.type===TT.EOF){result.push(tok);break;}
+      if(tok.type===TT.KEYWORD){
+        if(['function','do','then','repeat'].includes(tok.value))this.push();
+        if(['end','until'].includes(tok.value))this.pop();
+        if(tok.value==='local'){
+          result.push(tok);i++;
+          while(i<tokens.length&&tokens[i].type===TT.WHITESPACE){result.push(tokens[i]);i++;}
+          if(i<tokens.length&&tokens[i].type===TT.KEYWORD&&tokens[i].value==='function'){result.push(tokens[i]);i++;while(i<tokens.length&&tokens[i].type===TT.WHITESPACE){result.push(tokens[i]);i++;}}
+          while(i<tokens.length&&tokens[i].type===TT.NAME){
+            result.push({type:TT.NAME,value:this.define(tokens[i].value)});i++;
+            if(i<tokens.length&&tokens[i].type===TT.PUNCT&&tokens[i].value===','){result.push(tokens[i]);i++;while(i<tokens.length&&tokens[i].type===TT.WHITESPACE){result.push(tokens[i]);i++;}}else break;
+          }
+          continue;
+        }
+        result.push(tok);i++;continue;
+      }
+      if(tok.type===TT.NAME){const r=this.resolve(tok.value);result.push({type:TT.NAME,value:r||tok.value});i++;continue;}
+      result.push(tok);i++;
+    }
+    return result;
+  }
+}
+
+/* ── STRING ENCRYPTOR ───────────────────────────────────── */
+class StringEncryptor{
+  constructor(tokens){this.tokens=tokens;this.key=Util.randomKey(16);this.helperName=Util.confusingIdentifier(14);this.keyName=Util.confusingIdentifier(14);}
+  getDecryptorSource(){
+    const kl='{'+this.key.map(Util.toHex.bind(Util)).join(',')+'}';
+    return `local ${this.keyName}=${kl};local ${this.helperName}=function(s)local r={};for i=1,#s do r[i]=string.char(bit32.bxor(string.byte(s,i),${this.keyName}[((i-1)%#${this.keyName})+1]))end;return table.concat(r)end;`;
+  }
+  encryptString(raw){
+    const q=raw[0];
+    if(q!=='"'&&q!=="'")return null;
+    const inner=raw.slice(1,-1).replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\\\/g,'\\').replace(/\\'/g,"'").replace(/\\"/g,'"');
+    const enc=Util.xorString(inner,this.key);
+    const esc=enc.split('').map(c=>`\\${c.charCodeAt(0)}`).join('');
+    return `${this.helperName}("${esc}")`;
+  }
+  encrypt(){
+    return this.tokens.map(tok=>{
+      if(tok.type===TT.STRING){const e=this.encryptString(tok.value);if(e)return{type:TT.RAW,value:e};}
+      return tok;
+    });
+  }
+}
+
+/* ── NUMBER OBFUSCATOR ──────────────────────────────────── */
+function obfuscateNumbers(tokens){
+  return tokens.map(tok=>{
+    if(tok.type===TT.NUMBER){
+      const n=parseFloat(tok.value);
+      if(!isNaN(n)&&Number.isInteger(n)&&n>=0&&n<100000){
+        const a=Util.randInt(1,999);const b=n+a;
+        return{type:TT.RAW,value:`(${Util.toHex(b)}-${Util.toHex(a)})`};
+      }
+    }
+    return tok;
+  });
+}
+
+/* ── DEAD CODE ──────────────────────────────────────────── */
+function deadSnippets(){
+  const v1=Util.confusingIdentifier(8),v2=Util.confusingIdentifier(8),f1=Util.confusingIdentifier(8);
+  return[
+    `local ${v1}=math.huge;if ${v1}~=${v1} then error("x")end`,
+    `do local ${v2}={}; for ${v1}=1,0 do ${v2}[${v1}]=true end end`,
+    `if 1==2 then local ${v1}="dead" end`,
+    `local ${f1}=function(${v1})return ${v1}*0 end;${f1}(0)`,
+  ];
+}
+
+function injectDeadCode(source){
+  const lines=source.split('\n'),result=[];
+  for(const line of lines){
+    result.push(line);
+    if(Util.randInt(0,100)<12)result.push('  '+Util.pick(deadSnippets()));
+  }
+  return result.join('\n');
+}
+
+/* ── CONTROL FLOW ───────────────────────────────────────── */
+function wrapControlFlow(source){
+  const sv=Util.confusingIdentifier(12),dv=Util.confusingIdentifier(12);
+  const bA=Util.confusingIdentifier(10);
+  const op=`(function()local ${bA}=math.floor(1.9999);return(${bA}>0)end)()`;
+  return `local ${sv}=0;local ${dv};${dv}=function()\nwhile true do\nif ${sv}==0 then\nif ${op} then ${sv}=1 else ${sv}=99 end\nelseif ${sv}==1 then\ndo\n${source.split('\n').map(l=>'  '+l).join('\n')}\nend\n${sv}=2\nelseif ${sv}==2 then\nbreak\nelse break\nend\nend\nend\n${dv}()`;
+}
+
+/* ── CUSTOM VM ──────────────────────────────────────────── */
+function buildVM(){
+  const key=Util.randomKey(4);
+  // A tiny demo bytecode: PUSH_CONST 0, CALL_1 0, RETURN
+  // const[0]="" globals[0]="print"  (runs print("") silently)
+  const instrRaw=[0x01,0x00,0x30,0x00,0xFF];
+  const encInstr=instrRaw.map((b,i)=>b^key[i%key.length]);
+  const kn=Util.confusingIdentifier(14),inn=Util.confusingIdentifier(14);
+  const cn=Util.confusingIdentifier(14),gn=Util.confusingIdentifier(14);
+  const vmn=Util.confusingIdentifier(14),stn=Util.confusingIdentifier(12);
+  const pcn=Util.confusingIdentifier(10),an=Util.confusingIdentifier(8),bn=Util.confusingIdentifier(8);
+  return `-- [[ VM ]]\nlocal ${kn}={${key.map(Util.toHex.bind(Util)).join(',')}}\nlocal ${inn}=(function()local raw={${encInstr.map(Util.toHex.bind(Util)).join(',')}};local d={};for i=1,#raw do d[i]=bit32.bxor(raw[i],${kn}[((i-1)%#${kn})+1])end;return d end)()\nlocal ${cn}={""}\nlocal ${gn}={"print"}\nlocal ${vmn}=function()\nlocal ${stn}={};local ${pcn}=1;local sp=0\nlocal function push(v)sp=sp+1;${stn}[sp]=v end\nlocal function pop()local v=${stn}[sp];sp=sp-1;return v end\nwhile ${pcn}<=#${inn} do\nlocal op=${inn}[${pcn}];${pcn}=${pcn}+1\nif op==0x01 then push(${cn}[${inn}[${pcn}]+1]);${pcn}=${pcn}+1\nelseif op==0x30 then local idx=${inn}[${pcn}];${pcn}=${pcn}+1;local fn=_G[${gn}[idx+1]];local ${an}=pop();pcall(fn,${an})\nelseif op==0xFF then break end\nend\nend\n${vmn}()\n-- [[ END VM ]]\n`;
+}
+
+/* ── ANTI-TAMPER ────────────────────────────────────────── */
+function buildAntiTamper(wid){
+  const sv=Util.confusingIdentifier(14),ev=Util.confusingIdentifier(14);
+  const hv=Util.confusingIdentifier(14),ad=Util.confusingIdentifier(14);
+  return `-- [[ ANTI-TAMPER ]]\nlocal ${sv}="${wid}"\nlocal ${ad}=function()\nlocal mt={}\nsetmetatable(mt,{__index=function(_,k)\nif k=="__INJECTED" then for i=1,math.huge do end end\nreturn nil\nend})\nlocal _=mt.__INJECTED\nend\npcall(${ad})\n-- [[ END ANTI-TAMPER ]]\n`;
+}
+
+/* ── WATERMARK ──────────────────────────────────────────── */
+function addWatermark(source,author,id){
+  let hash=5381;
+  for(let i=0;i<source.length;i++){hash=((hash<<5)+hash)^source.charCodeAt(i);hash=hash&0xFFFFFFFF;}
+  hash=(hash>>>0).toString(16).toUpperCase();
+  const wn=Util.confusingIdentifier(14),hn=Util.confusingIdentifier(14);
+  const block=`--[[\n  Protected by LuauObs v2.0\n  Author   : ${author}\n  ID       : ${id}\n  Time     : ${new Date().toISOString()}\n  Hash     : ${hash}\n]]\nlocal ${wn}="${id}"\nlocal ${hn}="${hash}"\nassert(type(${wn})=="string","integrity")\n`;
+  return block+'\n'+source;
+}
+
+/* ── TOKENS TO STRING ───────────────────────────────────── */
+function tokStr(tokens){return tokens.map(t=>t.value).join('')}
+
+/* ── MAIN PIPELINE ──────────────────────────────────────── */
+function obfuscate(source,opts){
+  let tokens=new Lexer(source).tokenize();
+  tokens=tokens.filter(t=>t.type!==TT.COMMENT);
+
+  if(opts.renameVariables)tokens=new VariableRenamer(tokens).rename();
+
+  let decSrc='';
+  if(opts.encryptStrings){const e=new StringEncryptor(tokens);decSrc=e.getDecryptorSource();tokens=e.encrypt();}
+
+  if(opts.obfuscateNumbers)tokens=obfuscateNumbers(tokens);
+
+  let src=tokStr(tokens);
+
+  if(opts.injectDeadCode)src=injectDeadCode(src);
+  if(opts.encryptStrings)src=decSrc+'\n'+src;
+
+  let vmSrc='';
+  if(opts.customVM)vmSrc=buildVM();
+
+  if(opts.controlFlow)src=wrapControlFlow(src);
+
+  let atSrc='';
+  if(opts.antiTamper)atSrc=buildAntiTamper(opts.watermarkId);
+
+  let final=[atSrc,vmSrc,src].join('\n');
+
+  if(opts.watermark)final=addWatermark(final,opts.watermarkAuthor,opts.watermarkId);
+
+  return final;
+}
+
+/* ── UI ─────────────────────────────────────────────────── */
+const inputEl=document.getElementById('inputCode');
+const outputEl=document.getElementById('outputCode');
+
+function getOpts(){
+  const bool=id=>document.getElementById(id).checked;
+  return{
+    renameVariables: bool('opt_renameVariables'),
+    encryptStrings:  bool('opt_encryptStrings'),
+    obfuscateNumbers:bool('opt_obfuscateNumbers'),
+    injectDeadCode:  bool('opt_injectDeadCode'),
+    controlFlow:     bool('opt_controlFlow'),
+    customVM:        bool('opt_customVM'),
+    antiTamper:      bool('opt_antiTamper'),
+    watermark:       bool('opt_watermark'),
+    watermarkAuthor: document.getElementById('opt_author').value||'Anonymous',
+    watermarkId:     document.getElementById('opt_id').value||Math.random().toString(36).slice(2,10).toUpperCase(),
+  };
+}
+
+function updateStats(inSrc,outSrc){
+  document.getElementById('stat_in').textContent=inSrc.length.toLocaleString();
+  document.getElementById('stat_out').textContent=outSrc.length.toLocaleString();
+  document.getElementById('stat_ratio').textContent=inSrc.length?(outSrc.length/inSrc.length).toFixed(1)+'x':'—';
+  const opts=getOpts();
+  const layers=['renameVariables','encryptStrings','obfuscateNumbers','injectDeadCode','controlFlow','customVM','antiTamper','watermark'];
+  document.getElementById('stat_layers').textContent=layers.filter(k=>opts[k]).length;
+}
+
+function updateInputCount(){
+  const v=inputEl.value;
+  document.getElementById('inputCount').textContent=`${v.length.toLocaleString()} chars · ${v.split('\n').length} lines`;
+}
+
+function updateOutputCount(){
+  const v=outputEl.value;
+  document.getElementById('outputCount').textContent=`${v.length.toLocaleString()} chars · ${v.split('\n').length} lines`;
+}
+
+function setStatus(which,state,msg){
+  const dot=document.getElementById(which+'Status');
+  const txt=document.getElementById(which+'StatusText');
+  dot.className='status-dot '+state;
+  txt.textContent=msg;
+}
+
+function runObfuscate(){
+  const src=inputEl.value.trim();
+  if(!src){showToast('⚠️ Paste some Luau code first!');return;}
+
+  const btn=document.getElementById('obfBtn');
+  btn.classList.add('loading');
+  btn.textContent='⏳ Obfuscating...';
+  setStatus('output','busy','Processing...');
+
+  setTimeout(()=>{
+    try{
+      const opts=getOpts();
+      const out=obfuscate(src,opts);
+      outputEl.value=out;
+      updateStats(src,out);
+      updateOutputCount();
+      setStatus('output','ok','Done — '+out.length.toLocaleString()+' chars');
+      showToast('✅ Obfuscation complete!');
+    }catch(e){
+      outputEl.value='-- ERROR: '+e.message;
+      setStatus('output','err','Error: '+e.message);
+      showToast('❌ Error: '+e.message);
+    }
+    btn.classList.remove('loading');
+    btn.textContent='⚡ Obfuscate';
+    updateBadges();
+  },60);
+}
+
+function updateBadges(){
+  const opts=getOpts();
+  const labels={renameVariables:'Var Rename',encryptStrings:'Str Encrypt',obfuscateNumbers:'Num Obf',injectDeadCode:'Dead Code',controlFlow:'Ctrl Flow',customVM:'Custom VM',antiTamper:'Anti-Tamper',watermark:'Watermark'};
+  const row=document.getElementById('badgeRow');
+  row.innerHTML=Object.entries(labels).map(([k,l])=>`<div class="badge ${opts[k]?'on':''}">${l}</div>`).join('');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function clearInput(){inputEl.value='';updateInputCount();updateStats('','');setStatus('input','ok','Cleared');}
+
+function copyOutput(){
+  if(!outputEl.value){showToast('⚠️ Nothing to copy!');return;}
+  navigator.clipboard.writeText(outputEl.value).then(()=>showToast('📋 Copied to clipboard!'));
+}
+
+function downloadOutput(){
+  if(!outputEl.value){showToast('⚠️ Nothing to download!');return;}
+  const blob=new Blob([outputEl.value],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='obfuscated.lua';
+  a.click();
+  showToast('💾 Downloaded!');
+}
+
+function loadDemo(){
+  inputEl.value=`-- Sample Luau Game Script
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local MAX_HEALTH = 100
+local SPEED = 16
+local JUMP_POWER = 50
+
+local function initPlayer(player)
+  local character = player.Character or player.CharacterAdded:Wait()
+  local humanoid = character:WaitForChild("Humanoid")
+
+  humanoid.MaxHealth = MAX_HEALTH
+  humanoid.Health = MAX_HEALTH
+  humanoid.WalkSpeed = SPEED
+  humanoid.JumpPower = JUMP_POWER
+
+  print("Initialized player: " .. player.Name)
+end
+
+local function onPlayerAdded(player)
+  local success, err = pcall(initPlayer, player)
+  if not success then
+    warn("Failed to init player: " .. tostring(err))
+  end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+for _, player in ipairs(Players:GetPlayers()) do
+  onPlayerAdded(player)
+end`;
+  updateInputCount();
+  setStatus('input','ok','Demo loaded');
+}
+
+// Event listeners
+inputEl.addEventListener('input',()=>{updateInputCount();setStatus('input','ok','Ready');});
+
+// Bind toggles to badge refresh
+document.querySelectorAll('#toggleGroup input[type=checkbox]').forEach(cb=>{
+  cb.addEventListener('change',updateBadges);
+});
+
+// Keyboard shortcut: Ctrl+Enter = obfuscate
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runObfuscate();}
+});
+
+// Init
+updateBadges();
+updateInputCount();
+setStatus('input','ok','Ready');
+setStatus('output','','Awaiting input');
+</script>
+
+</body>
+</html>
